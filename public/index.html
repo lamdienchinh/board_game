@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chơi Bài Cùng Bạn</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🃏</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "@shared/": "./shared/" } }
+</script>
+</head>
+<body>
+<canvas id="c" aria-label="Bàn chơi bài với những người bạn dễ thương"></canvas>
+
+<header id="top">
+  <div class="brand">Chơi Bài<span>Cùng Bạn</span></div>
+  <div id="scores" aria-label="Số sao trong phiên"></div>
+  <button id="peopleBtn" class="icon" aria-label="Người chơi trong phòng" hidden>👥</button>
+  <button id="helpBtn" class="icon" aria-label="Luật chơi">?</button>
+  <button id="muteBtn" class="icon" aria-label="Tắt âm thanh" aria-pressed="false">♪</button>
+</header>
+
+<div id="anchors"></div>
+<div id="banner" aria-live="polite"></div>
+<div id="toast" role="status"></div>
+
+<footer id="bar">
+  <div class="tag me" id="meTag"><i class="av" style="--c:#FFC857"></i><span class="nm">Bạn</span><em id="meCount">13</em></div>
+  <button id="emoteBtn" class="icon" aria-label="Gửi biểu cảm" aria-expanded="false">☺</button>
+  <div id="emotes" hidden></div>
+  <div id="label">Chạm để chọn lá, hoặc vuốt qua nhiều lá.</div>
+  <button id="hintBtn" class="btn ghost" disabled>Gợi ý</button>
+  <button id="passBtn" class="btn pass" disabled>Bỏ lượt</button>
+  <button id="playBtn" class="btn play" disabled>Đánh</button>
+</footer>
+
+<!-- Main menu: pick a game, then a tab -->
+<div class="overlay" id="start">
+  <div class="panel menu">
+    <header class="menu-head">
+      <div>
+        <p class="eyebrow">Chơi cho vui cùng hội bạn thân</p>
+        <h1>Chơi bài<span>cùng bạn</span></h1>
+      </div>
+      <button class="account-chip" id="accountChip" aria-label="Tài khoản"><i class="av" style="--c:#FFC857"></i><span>Khách</span></button>
+    </header>
+
+    <div class="games" id="games" role="radiogroup" aria-label="Trò chơi">
+      <button role="radio" data-game="tienlen"><span class="gi">🃏</span><b>Tiến Lên</b><small>2–4 người · đánh hết 13 lá, chặt heo bằng hàng</small></button>
+      <button role="radio" data-game="xidach"><span class="gi">🎲</span><b>Xì Dách</b><small>2–10 người · rút sát 21 điểm, nặn bài đấu nhà cái</small></button>
+    </div>
+
+    <nav class="tabs" role="tablist" aria-label="Chế độ">
+      <button role="tab" id="tab-solo" aria-controls="pane-solo" data-tab="solo"><span>🤖</span>Chơi với máy</button>
+      <button role="tab" id="tab-online" aria-controls="pane-online" data-tab="online"><span>🌐</span>Online</button>
+      <button role="tab" id="tab-rules" aria-controls="pane-rules" data-tab="rules"><span>📖</span>Luật</button>
+      <button role="tab" id="tab-account" aria-controls="pane-account" data-tab="account"><span>👤</span>Tài khoản</button>
+    </nav>
+
+    <section class="pane" role="tabpanel" id="pane-solo" aria-labelledby="tab-solo">
+      <div class="friends" id="friends"></div>
+      <div class="botctl"><span>Máy chơi cùng</span><button aria-label="Bớt một máy" data-d="-1">−</button><b>3</b><button aria-label="Thêm một máy" data-d="1">+</button></div>
+      <label class="dealerctl" hidden><span>Nhà cái</span><select></select><small></small></label>
+      <button class="btn big" id="startBtn">Chơi ngay</button>
+    </section>
+
+    <section class="pane" role="tabpanel" id="pane-online" aria-labelledby="tab-online" hidden>
+      <p class="note" id="offline" hidden>Trang này đang chạy không có máy chủ phòng — chỉ chơi được với máy. Chạy <code>npm start</code> để mở phòng online.</p>
+      <div id="online">
+        <div class="row"><input id="nameIn" maxlength="12" placeholder="Tên của bạn" aria-label="Tên của bạn" autocomplete="nickname"><button class="btn" id="createBtn">Tạo phòng</button></div>
+        <div class="row"><input id="codeIn" maxlength="4" placeholder="Mã phòng" aria-label="Mã phòng" autocomplete="off"><button class="btn ghost" id="joinBtn">Vào</button></div>
+        <div class="list-head"><span>Phòng đang mở</span><small id="roomCount"></small></div>
+        <ul class="rooms" id="roomList" aria-label="Phòng đang mở"></ul>
+      </div>
+    </section>
+
+    <section class="pane" role="tabpanel" id="pane-rules" aria-labelledby="tab-rules" hidden>
+      <div id="rulesHome"></div>
+    </section>
+
+    <section class="pane" role="tabpanel" id="pane-account" aria-labelledby="tab-account" hidden>
+      <div class="profile" id="profile">
+        <i class="av big-av" style="--c:#FFC857"></i><img id="avatar" alt="" hidden referrerpolicy="no-referrer">
+        <div><b id="profileName">Khách</b><small id="profileSub">Chơi không cần tài khoản</small></div>
+      </div>
+      <div id="googleBox" hidden><div id="googleBtn"></div><small>Đăng nhập để giữ tên và chỗ ngồi khi vào lại phòng, kể cả trên máy khác.</small></div>
+      <button class="btn ghost" id="logoutBtn" hidden>Đăng xuất</button>
+      <p class="note" id="noGoogle" hidden>Máy chủ chưa bật đăng nhập Google (thiếu <code>GOOGLE_CLIENT_ID</code>).</p>
+      <div class="stats" id="stats"></div>
+      <div class="settings">
+        <label><input type="checkbox" id="soundIn"> Âm thanh</label>
+        <button class="btn ghost" id="resetBtn">Xóa sao chơi với máy</button>
+      </div>
+    </section>
+
+    <p class="fine">Chỉ tính sao, không dùng tiền thật.</p>
+  </div>
+</div>
+
+<!-- Room: waiting before a round, or opened mid-game from 👥 -->
+<div class="overlay" id="room" hidden>
+  <div class="panel">
+    <p class="eyebrow">Phòng chờ</p>
+    <h2>Phòng <span id="roomCode"></span> <button class="copy" id="copyBtn" aria-label="Sao chép mã phòng">⧉</button></h2>
+    <p>Trò chơi: <b id="roomGame"></b>. Gửi mã cho bạn bè. Có người vào mà hết ghế thì người thay chỗ máy; ai thoát giữa ván thì máy chơi thay ngay.</p>
+    <p class="note" id="roomStatus" hidden></p>
+    <ol class="results" id="seatList"></ol>
+    <div id="roomLast" hidden><div class="list-head"><span>Ván vừa rồi</span></div><ol class="results" id="lastList"></ol></div>
+    <div class="botctl"><span>Máy chơi cùng</span><button aria-label="Bớt một máy" data-d="-1">−</button><b>3</b><button aria-label="Thêm một máy" data-d="1">+</button></div>
+    <label class="dealerctl" hidden><span>Nhà cái</span><select></select><small></small></label>
+    <button class="btn big" id="roomStart">Bắt đầu</button>
+    <button class="btn ghost big leave" id="roomClose" hidden>Quay lại bàn</button>
+    <button class="btn ghost big leave" id="roomLeave">Rời phòng</button>
+  </div>
+</div>
+
+<div class="overlay" id="end" hidden>
+  <div class="panel">
+    <p class="eyebrow">Hết ván</p>
+    <h2 id="endTitle">Bạn thắng!</h2>
+    <p id="endSub"></p>
+    <ol class="results" id="results"></ol>
+    <div class="botctl"><span>Máy chơi cùng</span><button aria-label="Bớt một máy" data-d="-1">−</button><b>3</b><button aria-label="Thêm một máy" data-d="1">+</button></div>
+    <label class="dealerctl" hidden><span>Nhà cái</span><select></select><small></small></label>
+    <button class="btn big" id="againBtn">Chơi ván mới</button>
+    <button class="btn ghost big leave" id="endLeave">Về menu</button>
+  </div>
+</div>
+
+<div class="overlay" id="help" hidden>
+  <div class="panel wide">
+    <p class="eyebrow">Hướng dẫn</p>
+    <h2 id="helpTitle">Luật chơi</h2>
+    <div id="rulesBox">
+      <ul class="rules" data-game="xidach">
+        <li><b>Mục tiêu.</b> Chơi được 2–10 người. Mỗi người chơi đấu riêng với nhà cái. Rút bài sao cho tổng điểm càng gần 21 càng tốt, nhưng không được quá 21.</li>
+        <li><b>Nặn bài.</b> Bài chia cho bạn úp xuống. Chạm để lật, hoặc kéo lá bài lên từ từ để nặn cho hồi hộp. Bấm Rút / Dằn thì bài tự lật.</li>
+        <li><b>Tính điểm.</b> Lá 2 đến 10 tính theo số, J Q K tính 10. Lá A: có 2 lá thì A là 11 hoặc 10; có 3 lá thì A là 10 hoặc 1; có 4–5 lá thì A là 1. Luôn tính theo cách có lợi nhất.</li>
+        <li><b>Xì bàng, xì dách.</b> Xét ngay khi chia bài. Xì bàng là 2 lá A, lớn nhất. Xì dách là A với 10, J, Q hoặc K.
+          <small>Nhà cái có xì bàng hoặc xì dách thì lật bài, ăn cả bàn (ai có bài bằng thì hòa, ai có xì bàng thì vẫn thắng xì dách). Người chơi có xì bàng hoặc xì dách thì thắng luôn.</small></li>
+        <li><b>Rút và dằn.</b> Mỗi người rút tối đa 5 lá. Người chơi phải đủ 16 điểm mới được dằn (dừng rút). Nhà cái đi sau cùng và phải đủ 15 điểm.</li>
+        <li><b>Ngũ linh.</b> Rút đủ 5 lá mà tổng không quá 21 điểm. Lớn hơn mọi bài thường, chỉ thua xì bàng và xì dách. Hai bên cùng ngũ linh thì hòa.</li>
+        <li><b>Quắc.</b> Quá 21 điểm là quắc, thua nhà cái. Nhà cái quắc thì thua mọi người chưa quắc. Cả hai cùng quắc thì hòa.</li>
+        <li><b>Xét bài.</b> Khi đủ 15 điểm, nhà cái được xét (so bài) từng người rồi rút tiếp, hoặc lật bài so với tất cả những người còn lại. Chạm vào tên người chơi để xét.</li>
+        <li><b>Thứ tự.</b> Xì bàng &gt; Xì dách &gt; Ngũ linh &gt; 21 &gt; 20 &gt; … &gt; 16. Bằng điểm thì hòa.</li>
+        <li><b>Tính sao.</b> Bên thắng ăn theo bài của mình: bài thường ★1 · xì dách, ngũ linh ★2 · xì bàng ★3. Chủ phòng chọn nhà cái: xoay vòng mỗi ván, hoặc cố định một người.</li>
+        <li><b>Phím tắt.</b> R: rút · D: dằn · L: lật bài (nhà cái) · N: nặn / lật bài của bạn.</li>
+      </ul>
+      <ul class="rules" data-game="tienlen">
+        <li><b>Mục tiêu.</b> Đánh hết 13 lá trên tay trước những người khác.</li>
+        <li><b>Thứ tự lá.</b> 3 nhỏ nhất, rồi lên dần đến K, A, và 2 (heo) lớn nhất. Cùng số thì so chất: ♠ bích &lt; ♣ chuồn &lt; ♦ rô &lt; ♥ cơ.</li>
+        <li><b>Các bộ bài.</b> Lẻ · Đôi · Sám cô (3 lá cùng số) · Sảnh (từ 3 lá liên tiếp, không có heo) · Đôi thông (từ 3 đôi liên tiếp) · Tứ quý (4 lá cùng số).</li>
+        <li><b>Chặn bài.</b> Đánh bộ cùng loại, cùng số lá, có lá cao nhất lớn hơn. Đã bỏ lượt thì phải chờ vòng mới. Khi mọi người đều bỏ, người đánh sau cùng được đi tiếp; nếu người đó đã hết bài thì người kế tiếp đi.</li>
+        <li><b>Chặt heo.</b> 3 đôi thông chặt được 1 heo. Tứ quý chặt được 1 heo, đôi heo hoặc 3 đôi thông. 4 đôi thông chặt được tất cả những bộ đó, kể cả tứ quý. Hàng lớn hơn cùng loại chặt đè được hàng nhỏ (chặt chồng).</li>
+        <li><b>Số người.</b> Chơi được từ 2 đến 4 người, mỗi người luôn được chia 13 lá.</li>
+        <li><b>Ai đi trước.</b> Ván đầu: người có 3♠ đi trước và nước đầu phải có lá đó (chơi ít người mà không ai có 3♠ thì người có lá nhỏ nhất đi trước). Các ván sau: người thắng ván trước đi trước.</li>
+        <li><b>Tới trắng.</b> Vừa chia bài xong mà có một trong các bộ sau thì thắng ngay, không cần đánh:
+          <small>Sảnh rồng (3 đến A) · Tứ quý heo · 5 đôi thông · 6 đôi bất kỳ · 13 lá đồng màu (toàn đỏ hoặc toàn đen). Người tới trắng được số sao của hạng nhất, những người còn lại 0★.</small></li>
+        <li><b>Cóng.</b> Khi có người về nhất mà bạn chưa đánh được lá nào thì bị cóng: xếp cuối, 0★ và bị trừ thêm 1★.</li>
+        <li><b>Thối heo, thối hàng.</b> Hết ván mà trên tay vẫn còn heo thì mỗi con heo bị trừ 1★. Còn hàng (tứ quý, đôi thông) thì bị trừ thêm 1★.</li>
+        <li><b>Tính sao.</b> Bét 0★, mỗi hạng trên được thêm ★1. Bốn người: Nhất ★3 · Nhì ★2 · Ba ★1 · Bét 0★.</li>
+        <li><b>Phím tắt.</b> Enter: đánh · Phím cách: bỏ lượt · H: gợi ý · Esc: bỏ chọn.</li>
+      </ul>
+    </div>
+    <button class="btn big" id="helpClose">Đã hiểu</button>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
